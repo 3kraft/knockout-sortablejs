@@ -18,7 +18,7 @@
 
   var init = function (element, valueAccessor, allBindings, viewModel, bindingContext, sortableOptions) {
 
-		var eventNames = ['onStart', 'onEnd', 'onRemove', 'onAdd', 'onUpdate', 'onSort', 'onFilter', 'onMove', 'onClone'];
+    var eventNames = ['onStart', 'onEnd', 'onRemove', 'onAdd', 'onUpdate', 'onSort', 'onFilter', 'onMove', 'onClone'];
     var options = buildOptions(valueAccessor, sortableOptions);
 
     // It's seems that we cannot update the eventhandlers after we've created
@@ -38,11 +38,11 @@
           var collection = bindingHandlerBinding.collection || bindingHandlerBinding.foreach;
 
           if (handler) {
-						handler(e, itemVM, parentVM, collection, bindings);
-					}
+            handler(e, itemVM, parentVM, collection, bindings);
+          }
           if (eventHandlers[eventType]) {
-						eventHandlers[eventType](e, itemVM, parentVM, collection, bindings);
-					}
+            eventHandlers[eventType](e, itemVM, parentVM, collection, bindings);
+          }
         }.bind(undefined, e, viewModel, allBindings, options[e]);
     });
 
@@ -65,7 +65,7 @@
 
   var eventHandlers = (function buildDefaultEventHandlers() {
 
-		var handlers = {};
+    var handlers = {};
     var moveOperations = [];
 
     var tryMoveOperation = function (e, itemVM, parentVM, collection, parentBindings) {
@@ -78,8 +78,7 @@
 
       if (!existingOperation) {
         moveOperations.push(currentOperation);
-      }
-      else {
+      } else {
         // We're finishing the operation and already have a handle on
         // the operation item meaning that it's safe to remove it
         moveOperations.splice(moveOperations.indexOf(existingOperation), 1);
@@ -88,6 +87,16 @@
           addOperation = currentOperation.event.type === 'add' ? currentOperation : existingOperation;
 
         moveItem(itemVM, removeOperation.collection, addOperation.collection, addOperation.event.clone, addOperation.event);
+
+        // work around for moving from one collection to the other
+        if (
+          currentOperation.event.type === 'remove' &&
+          removeOperation.collection !== addOperation.collection
+        ) {
+          // original implementation wouldn't delete the old item
+          // from the originating list. it would add to the new list...
+          removeOperation.collection.remove(itemVM);
+        }
       }
     };
     // Moves an item from the "from" collection to the "to" collection, these
@@ -118,13 +127,12 @@
       // when manipulating arrays and avoid a "unbound" item added by sortable
       fromArray.splice(originalIndex, 1);
       // Update the array, this will also remove sortables "unbound" clone
-      from.valueHasMutated();
       if (clone && from !== to) {
         // Read the item
         fromArray.splice(originalIndex, 0, itemVM);
-        // Force knockout to update
-        from.valueHasMutated();
       }
+      // Force knockout to update
+      from.valueHasMutated();
       // Force deferred tasks to run now, registering the removal
       ko.tasks.runEarly();
       // Insert the item on its new position
