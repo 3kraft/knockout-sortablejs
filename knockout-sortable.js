@@ -1,63 +1,20 @@
 /*global ko*/
 
-(function (factory) {
-  "use strict";
-  //get ko ref via global or require
-  var koRef;
-  if (typeof ko !== 'undefined') {
-    //global ref already defined
-    koRef = ko;
+(function (root, factory) {
+  'use strict';
+
+  if (typeof define === 'function' && define.amd) {
+    // AMD/RequireJS
+    define(['knockout', 'Sortable'], factory);
+  } else if (typeof exports === 'object') {
+    // CommonJS/NodeJS
+    module.exports = factory(require('knockout'), require('Sortable'));
+  } else {
+    // vanilla <script> tags
+    factory(root.ko, root.Sortable);
   }
-  else if (typeof require === 'function' && typeof exports === 'object' && typeof module === 'object') {
-    //commonjs / node.js
-    koRef = require('knockout');
-  }
-  //get sortable ref via global or require
-  var sortableRef;
-  if (typeof Sortable !== 'undefined') {
-    //global ref already defined
-    sortableRef = Sortable;
-  }
-  else if (typeof require === 'function' && typeof exports === 'object' && typeof module === 'object') {
-    //commonjs / node.js
-    sortableRef = require('sortablejs');
-  }
-  //use references if we found them
-  if (koRef !== undefined && sortableRef !== undefined) {
-    factory(koRef, sortableRef);
-  }
-  //if both references aren't found yet, get via AMD if available
-  else if (typeof define === 'function' && define.amd) {
-    //we may have a reference to only 1, or none
-    if (koRef !== undefined && sortableRef === undefined) {
-      define(['./Sortable'], function (amdSortableRef) {
-        factory(koRef, amdSortableRef);
-      });
-    }
-    else if (koRef === undefined && sortableRef !== undefined) {
-      define(['knockout'], function (amdKnockout) {
-        factory(amdKnockout, sortableRef);
-      });
-    }
-    else if (koRef === undefined && sortableRef === undefined) {
-      define(['knockout', './Sortable'], factory);
-    }
-  }
-  //no more routes to get references
-  else {
-    //report specific error
-    if (koRef !== undefined && sortableRef === undefined) {
-      throw new Error('knockout-sortable could not get reference to Sortable');
-    }
-    else if (koRef === undefined && sortableRef !== undefined) {
-      throw new Error('knockout-sortable could not get reference to Knockout');
-    }
-    else if (koRef === undefined && sortableRef === undefined) {
-      throw new Error('knockout-sortable could not get reference to Knockout or Sortable');
-    }
-  }
-})(function (ko, Sortable) {
-  "use strict";
+}(this, function (ko, Sortable) {
+  'use strict';
 
   var init = function (element, valueAccessor, allBindings, viewModel, bindingContext, sortableOptions) {
 
@@ -247,4 +204,4 @@
       return update(element, valueAccessor, allBindings, viewModel, bindingContext, ko.bindingHandlers.sortable.sortableOptions);
     }
   };
-});
+}));
