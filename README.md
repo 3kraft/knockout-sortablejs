@@ -1,14 +1,19 @@
-# THIS PROJECT NEEDS A MAINTAINER.
+# THIS IS MY PERSONAL BRANCH OF AN ABANDONED PROJECT.
+
+Use at your own risk. It works for me with my needs. Message me if it helps you,
+and I'll think about taking over the maintainer role. I wonder if I'm on the
+one using it still...
+
+Original project: https://github.com/SortableJS/knockout-sortablejs
 
 ---
 
-knockout-sortablejs
+knockout-sortablejs fork
 -------------------
 A Knockout.js binding to [SortableJS](https://github.com/RubaXa/Sortable/).
 
-Demo: http://rubaxa.github.io/Sortable/
-
 ### Support KnockoutJS
+
 Include [knockout-sortable.js](knockout-sortable.js)
 
 ```html
