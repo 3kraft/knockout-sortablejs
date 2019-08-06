@@ -61,24 +61,31 @@
 
   var init = function (element, valueAccessor, allBindings, viewModel, bindingContext, sortableOptions) {
 
+		var eventNames = ['onStart', 'onEnd', 'onRemove', 'onAdd', 'onUpdate', 'onSort', 'onFilter', 'onMove', 'onClone'];
     var options = buildOptions(valueAccessor, sortableOptions);
 
     // It's seems that we cannot update the eventhandlers after we've created
     // the sortable, so define them in init instead of update
-    ['onStart', 'onEnd', 'onRemove', 'onAdd', 'onUpdate', 'onSort', 'onFilter', 'onMove', 'onClone'].forEach(function (e) {
+    eventNames.forEach(function (e) {
       if (options[e] || eventHandlers[e])
         options[e] = function (eventType, parentVM, parentBindings, handler, e) {
-          var itemVM = ko.dataFor(e.item),
-            // All of the bindings on the parent element
-            bindings = ko.utils.peekObservable(parentBindings()),
-            // The binding options for the draggable/sortable binding of the parent element
-            bindingHandlerBinding = bindings.sortable || bindings.draggable,
-            // The collection that we should modify
-            collection = bindingHandlerBinding.collection || bindingHandlerBinding.foreach;
-          if (handler)
-            handler(e, itemVM, parentVM, collection, bindings);
-          if (eventHandlers[eventType])
-            eventHandlers[eventType](e, itemVM, parentVM, collection, bindings);
+          var itemVM = ko.dataFor(e.item);
+
+          // All of the bindings on the parent element
+          var bindings = ko.utils.peekObservable(parentBindings());
+
+          // The binding options for the draggable/sortable binding of the parent element
+          var bindingHandlerBinding = bindings.sortable || bindings.draggable;
+
+          // The collection that we should modify
+          var collection = bindingHandlerBinding.collection || bindingHandlerBinding.foreach;
+
+          if (handler) {
+						handler(e, itemVM, parentVM, collection, bindings);
+					}
+          if (eventHandlers[eventType]) {
+						eventHandlers[eventType](e, itemVM, parentVM, collection, bindings);
+					}
         }.bind(undefined, e, viewModel, allBindings, options[e]);
     });
 
@@ -89,81 +96,85 @@
       sortableElement.destroy();
     });
     return ko.bindingHandlers.template.init(element, valueAccessor);
-  },
-  update = function (element, valueAccessor, allBindings, viewModel, bindingContext, sortableOptions) {
+  };
+
+  var update = function (element, valueAccessor, allBindings, viewModel, bindingContext, sortableOptions) {
 
     // There seems to be some problems with updating the options of a sortable
     // Tested to change eventhandlers and the group options without any luck
 
     return ko.bindingHandlers.template.update(element, valueAccessor, allBindings, viewModel, bindingContext);
-  },
-  eventHandlers = (function (handlers) {
+  };
 
-    var moveOperations = [],
-      tryMoveOperation = function (e, itemVM, parentVM, collection, parentBindings) {
-        // A move operation is the combination of a add and remove event,
-        // this is to make sure that we have both the target and origin collections
-        var currentOperation = { event: e, itemVM: itemVM, parentVM: parentVM, collection: collection, parentBindings: parentBindings },
-          existingOperation = moveOperations.filter(function (op) {
-            return op.itemVM === currentOperation.itemVM;
-          })[0];
+  var eventHandlers = (function buildDefaultEventHandlers() {
 
-        if (!existingOperation) {
-          moveOperations.push(currentOperation);
-        }
-        else {
-          // We're finishing the operation and already have a handle on
-          // the operation item meaning that it's safe to remove it
-          moveOperations.splice(moveOperations.indexOf(existingOperation), 1);
+		var handlers = {};
+    var moveOperations = [];
 
-          var removeOperation = currentOperation.event.type === 'remove' ? currentOperation : existingOperation,
-            addOperation = currentOperation.event.type === 'add' ? currentOperation : existingOperation;
+    var tryMoveOperation = function (e, itemVM, parentVM, collection, parentBindings) {
+      // A move operation is the combination of a add and remove event,
+      // this is to make sure that we have both the target and origin collections
+      var currentOperation = { event: e, itemVM: itemVM, parentVM: parentVM, collection: collection, parentBindings: parentBindings },
+        existingOperation = moveOperations.filter(function (op) {
+          return op.itemVM === currentOperation.itemVM;
+        })[0];
 
-          moveItem(itemVM, removeOperation.collection, addOperation.collection, addOperation.event.clone, addOperation.event);
-        }
-      },
-      // Moves an item from the "from" collection to the "to" collection, these
-      // can be references to the same collection which means it's a sort.
-      // clone indicates if we should move or copy the item into the new collection
-      moveItem = function (itemVM, from, to, clone, e) {
-        // Unwrapping this allows us to manipulate the actual array
-        var fromArray = from(),
-          // It's not certain that the items actual index is the same
-          // as the index reported by sortable due to filtering etc.
-          originalIndex = fromArray.indexOf(itemVM),
-          newIndex = e.newIndex;
+      if (!existingOperation) {
+        moveOperations.push(currentOperation);
+      }
+      else {
+        // We're finishing the operation and already have a handle on
+        // the operation item meaning that it's safe to remove it
+        moveOperations.splice(moveOperations.indexOf(existingOperation), 1);
 
-        // We have to find out the actual desired index of the to array,
-        // as this might be a computed array. We could otherwise potentially
-        // drop an item above the 3rd visible item, but the 2nd visible item
-        // has an actual index of 5.
-        if (e.item.previousElementSibling) {
-          newIndex = to().indexOf(ko.dataFor(e.item.previousElementSibling)) + 1;
-        }
+        var removeOperation = currentOperation.event.type === 'remove' ? currentOperation : existingOperation,
+          addOperation = currentOperation.event.type === 'add' ? currentOperation : existingOperation;
 
-        // Remove sortables "unbound" element
-        e.item.parentNode.removeChild(e.item);
+        moveItem(itemVM, removeOperation.collection, addOperation.collection, addOperation.event.clone, addOperation.event);
+      }
+    };
+    // Moves an item from the "from" collection to the "to" collection, these
+    // can be references to the same collection which means it's a sort.
+    // clone indicates if we should move or copy the item into the new collection
+    var moveItem = function (itemVM, from, to, clone, e) {
+      // Unwrapping this allows us to manipulate the actual array
+      var fromArray = from();
+      // It's not certain that the items actual index is the same
+      // as the index reported by sortable due to filtering etc.
+      var originalIndex = fromArray.indexOf(itemVM);
+      var newIndex = e.newIndex;
 
-        // This splice is necessary for both clone and move/sort
-        // In sort/move since it shouldn't be at this index/in this array anymore
-        // In clone since we have to work around knockouts valuHasMutated
-        // when manipulating arrays and avoid a "unbound" item added by sortable
-        fromArray.splice(originalIndex, 1);
-        // Update the array, this will also remove sortables "unbound" clone
+      // We have to find out the actual desired index of the to array,
+      // as this might be a computed array. We could otherwise potentially
+      // drop an item above the 3rd visible item, but the 2nd visible item
+      // has an actual index of 5.
+      if (e.item.previousElementSibling) {
+        newIndex = to().indexOf(ko.dataFor(e.item.previousElementSibling)) + 1;
+      }
+
+      // Remove sortables "unbound" element
+      e.item.parentNode.removeChild(e.item);
+
+      // This splice is necessary for both clone and move/sort
+      // In sort/move since it shouldn't be at this index/in this array anymore
+      // In clone since we have to work around knockouts valuHasMutated
+      // when manipulating arrays and avoid a "unbound" item added by sortable
+      fromArray.splice(originalIndex, 1);
+      // Update the array, this will also remove sortables "unbound" clone
+      from.valueHasMutated();
+      if (clone && from !== to) {
+        // Read the item
+        fromArray.splice(originalIndex, 0, itemVM);
+        // Force knockout to update
         from.valueHasMutated();
-        if (clone && from !== to) {
-          // Read the item
-          fromArray.splice(originalIndex, 0, itemVM);
-          // Force knockout to update
-          from.valueHasMutated();
-        }
-        // Force deferred tasks to run now, registering the removal
-        ko.tasks.runEarly();
-        // Insert the item on its new position
-        to().splice(newIndex, 0, itemVM);
-        // Make sure to tell knockout that we've modified the actual array.
-        to.valueHasMutated();
-      };
+      }
+      // Force deferred tasks to run now, registering the removal
+      ko.tasks.runEarly();
+      // Insert the item on its new position
+      to().splice(newIndex, 0, itemVM);
+      // Make sure to tell knockout that we've modified the actual array.
+      to.valueHasMutated();
+    };
 
     handlers.onRemove = tryMoveOperation;
     handlers.onAdd = tryMoveOperation;
@@ -174,10 +185,11 @@
     };
 
     return handlers;
-  })({}),
+  })();
+
   // bindingOptions are the options set in the "data-bind" attribute in the ui.
   // options are custom options, for instance draggable/sortable specific options
-  buildOptions = function (bindingOptions, options) {
+  var buildOptions = function (bindingOptions, options) {
     // deep clone/copy of properties from the "from" argument onto
     // the "into" argument and returns the modified "into"
     var merge = function (into, from) {
