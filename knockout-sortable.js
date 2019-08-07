@@ -93,9 +93,18 @@
           currentOperation.event.type === 'remove' &&
           removeOperation.collection !== addOperation.collection
         ) {
-          // original implementation wouldn't delete the old item
-          // from the originating list. it would add to the new list...
-          removeOperation.collection.remove(itemVM);
+          // As I'm still figuring out what the original author did, I'll
+          // admit this is a hack to fix an issue w/ the original
+          // implementation. It wouldn't delete the old item
+          // from the originating list.
+
+          // Since the collection isn't guaranteed to be a observableArray
+          // (think: computed array), we have to grab an array, manipulate
+          // it, then update the observable instead of just doing
+          // `collection.remove(itemVM)`.
+          var newArray = removeOperation.collection();
+          newArray.splice(newArray.indexOf(itemVM), 1);
+          removeOperation.collection(newArray);
         }
       }
     };
@@ -132,13 +141,14 @@
         fromArray.splice(originalIndex, 0, itemVM);
       }
       // Force knockout to update
-      from.valueHasMutated();
+      from(fromArray);
       // Force deferred tasks to run now, registering the removal
       ko.tasks.runEarly();
       // Insert the item on its new position
       to().splice(newIndex, 0, itemVM);
       // Make sure to tell knockout that we've modified the actual array.
-      to.valueHasMutated();
+      // Originally was to.valueHasMutated(), but that didn't support computeds
+      to(to());
     };
 
     handlers.onRemove = tryMoveOperation;
