@@ -123,7 +123,7 @@
       // as this might be a computed array. We could otherwise potentially
       // drop an item above the 3rd visible item, but the 2nd visible item
       // has an actual index of 5.
-      if (e.item.previousElementSibling) {
+      if (e.item.previousElementSibling && from !== to) {
         newIndex = to().indexOf(ko.dataFor(e.item.previousElementSibling)) + 1;
       }
 
